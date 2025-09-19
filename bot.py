@@ -4,7 +4,7 @@ from datetime import datetime
 from colorama import *
 import asyncio, json, os, pytz
 
-wib = pytz.timezone('Asia/Jakarta')
+pk = pytz.timezone('Asia/Karachi')
 
 class DePINed:
     def __init__(self) -> None:
@@ -127,39 +127,6 @@ class DePINed:
             f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
         )
 
-    def print_question(self):
-        while True:
-            try:
-                print(f"{Fore.WHITE + Style.BRIGHT}1. Run With Free Proxyscrape Proxy{Style.RESET_ALL}")
-                print(f"{Fore.WHITE + Style.BRIGHT}2. Run With Private Proxy{Style.RESET_ALL}")
-                print(f"{Fore.WHITE + Style.BRIGHT}3. Run Without Proxy{Style.RESET_ALL}")
-                choose = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3] -> {Style.RESET_ALL}").strip())
-
-                if choose in [1, 2, 3]:
-                    proxy_type = (
-                        "With Free Proxyscrape" if choose == 1 else 
-                        "With Private" if choose == 2 else 
-                        "Without"
-                    )
-                    print(f"{Fore.GREEN + Style.BRIGHT}Run {proxy_type} Proxy Selected.{Style.RESET_ALL}")
-                    break
-                else:
-                    print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2 or 3.{Style.RESET_ALL}")
-            except ValueError:
-                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2 or 3).{Style.RESET_ALL}")
-
-        rotate = False
-        if choose in [1, 2]:
-            while True:
-                rotate = input(f"{Fore.BLUE + Style.BRIGHT}Rotate Invalid Proxy? [y/n] -> {Style.RESET_ALL}").strip()
-                if rotate in ["y", "n"]:
-                    rotate = rotate == "y"
-                    break
-                else:
-                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
-
-        return choose, rotate
-    
     async def check_connection(self, email: str, proxy=None):
         url = "https://api.ipify.org?format=json"
         proxies = {"http":proxy, "https":proxy} if proxy else None
@@ -277,7 +244,8 @@ class DePINed:
                 self.log(f"{Fore.RED+Style.BRIGHT}No Accounts Loaded.{Style.RESET_ALL}")
                 return
             
-            use_proxy_choice, rotate_proxy = self.print_question()
+            use_proxy_choice = int(os.environ.get('PROXY_CHOICE', '3'))
+            rotate_proxy = os.environ.get('ROTATE_PROXY', 'n').lower() == 'y'
 
             use_proxy = False
             if use_proxy_choice in [1, 2]:
