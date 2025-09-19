@@ -4,10 +4,9 @@ from datetime import datetime
 from colorama import *
 import asyncio, json, os, pytz
 
-wib = pytz.timezone('Asia/Jakarta')
-
 class DePINed:
     def __init__(self) -> None:
+        self.wib = pytz.timezone('Asia/Jakarta')
         self.BASE_API = "https://api.depined.org/api"
         self.HEADERS = {}
         self.proxies = []
@@ -20,7 +19,7 @@ class DePINed:
 
     def log(self, message):
         print(
-            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
             f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}{message}",
             flush=True
         )
@@ -209,7 +208,7 @@ class DePINed:
             proxy = self.get_next_proxy_for_account(email) if use_proxy else None
 
             print(
-                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
                 f"{Fore.BLUE + Style.BRIGHT}Try to Sent Ping...{Style.RESET_ALL}",
                 end="\r",
@@ -221,7 +220,7 @@ class DePINed:
                 self.print_message(email, proxy, Fore.GREEN, "PING Success")
 
             print(
-                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
                 f"{Fore.BLUE + Style.BRIGHT}Wait For 90 Seconds For Next Ping...{Style.RESET_ALL}",
                 end="\r"
@@ -307,7 +306,7 @@ if __name__ == "__main__":
         asyncio.run(bot.main())
     except KeyboardInterrupt:
         print(
-            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(bot.wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
             f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
             f"{Fore.RED + Style.BRIGHT}[ EXIT ] DePINed - BOT{Style.RESET_ALL}                                       "                              
         )
