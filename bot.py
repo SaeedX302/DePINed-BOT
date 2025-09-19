@@ -4,7 +4,7 @@ from datetime import datetime
 from colorama import *
 import asyncio, json, os, pytz
 
-pk = pytz.timezone('Asia/Karachi')
+wib = pytz.timezone('Asia/Jakarta')
 
 class DePINed:
     def __init__(self) -> None:
