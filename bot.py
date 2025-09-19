@@ -3,23 +3,30 @@ from fake_useragent import FakeUserAgent
 from datetime import datetime
 from colorama import *
 import asyncio, json, os, pytz
+import re
 
 class DePINed:
     def __init__(self) -> None:
-        self.wib = pytz.timezone('Asia/Jakarta')
+        self.pkt = pytz.timezone('Asia/Karachi')
         self.BASE_API = "https://api.depined.org/api"
         self.HEADERS = {}
         self.proxies = []
         self.proxy_index = 0
         self.account_proxies = {}
         self.access_tokens = {}
+        self.account_earnings = {}
+        self.TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+        self.TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+        self.total_points = 0
+        self.total_pings = 0
+        self.last_update_id = 0
 
     def clear_terminal(self):
         os.system('cls' if os.name == 'nt' else 'clear')
 
     def log(self, message):
         print(
-            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.pkt).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
             f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}{message}",
             flush=True
         )
@@ -55,21 +62,17 @@ class DePINed:
             return []
     
     async def load_proxies(self, use_proxy_choice: int):
-        filename = "proxy.txt"
         try:
             if use_proxy_choice == 1:
                 response = await asyncio.to_thread(requests.get, "https://raw.githubusercontent.com/monosans/proxy-list/refs/heads/main/proxies/all.txt")
                 response.raise_for_status()
                 content = response.text
-                with open(filename, 'w') as f:
-                    f.write(content)
                 self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
-            else:
-                if not os.path.exists(filename):
-                    self.log(f"{Fore.RED + Style.BRIGHT}File {filename} Not Found.{Style.RESET_ALL}")
-                    return
-                with open(filename, 'r') as f:
-                    self.proxies = [line.strip() for line in f.read().splitlines() if line.strip()]
+            elif use_proxy_choice == 2:
+                response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/0c9c9850220784f8aebce1fde5759cf8/raw/3086a80e4c30238dacf2ceeabb8b73677f164d54/saeed.txt")
+                response.raise_for_status()
+                content = response.text
+                self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
             
             if not self.proxies:
                 self.log(f"{Fore.RED + Style.BRIGHT}No Proxies Found.{Style.RESET_ALL}")
@@ -83,6 +86,26 @@ class DePINed:
         except Exception as e:
             self.log(f"{Fore.RED + Style.BRIGHT}Failed To Load Proxies: {e}{Style.RESET_ALL}")
             self.proxies = []
+
+    async def refresh_proxies(self):
+        try:
+            self.log(f"{Fore.YELLOW}Refreshing private proxies...{Style.RESET_ALL}")
+            response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/0c9c9850220784f8aebce1fde5759cf8/raw/3086a80e4c30238dacf2ceeabb8b73677f164d54/saeed.txt")
+            response.raise_for_status()
+            content = response.text
+            self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
+            
+            if self.proxies:
+                self.log(f"{Fore.GREEN}Proxies refreshed successfully. New total: {len(self.proxies)}{Style.RESET_ALL}")
+                self.account_proxies = {} # Clear existing assigned proxies
+                self.proxy_index = 0
+            else:
+                self.log(f"{Fore.RED}Failed to refresh proxies. The new list is empty.{Style.RESET_ALL}")
+                
+        except Exception as e:
+            self.log(f"{Fore.RED}Failed to refresh proxies: {e}{Style.RESET_ALL}")
+            self.proxies = []
+
 
     def check_proxy_schemes(self, proxies):
         schemes = ["http://", "https://", "socks4://", "socks5://"]
@@ -125,6 +148,133 @@ class DePINed:
             f"{color + Style.BRIGHT} {message} {Style.RESET_ALL}"
             f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
         )
+    
+    def escape_markdown(self, text):
+        return re.sub(r'([_*\[\]()~`>#+\-=|{}.!])', r'\\\1', text)
+
+    async def send_telegram_status(self, message, use_proxy: bool):
+        if not self.TELEGRAM_BOT_TOKEN or not self.TELEGRAM_CHAT_ID:
+            self.log(f"{Fore.RED}Telegram token or chat ID not set. Skipping Telegram notification.{Style.RESET_ALL}")
+            return
+        
+        try:
+            proxies = {"http":self.get_next_proxy_for_account("telegram_bot"), "https":self.get_next_proxy_for_account("telegram_bot")} if use_proxy else None
+            url = f"https://api.telegram.org/bot{self.TELEGRAM_BOT_TOKEN}/sendMessage"
+            payload = {
+                'chat_id': self.TELEGRAM_CHAT_ID,
+                'text': message,
+                'parse_mode': 'MarkdownV2'
+            }
+            response = await asyncio.to_thread(requests.post, url, data=payload, proxies=proxies, impersonate="chrome110", verify=False)
+            response.raise_for_status()
+            self.log(f"{Fore.GREEN}Telegram status sent successfully.{Style.RESET_ALL}")
+        except Exception as e:
+            self.log(f"{Fore.RED}Failed to send Telegram message: {e}{Style.RESET_ALL}")
+    
+    async def telegram_status_task(self, use_proxy: bool):
+        while True:
+            await asyncio.sleep(600)  # Wait for 10 minutes
+            try:
+                if use_proxy:
+                    await self.refresh_proxies()
+                
+                # Fetch quote from API
+                proxies = {"http":self.get_next_proxy_for_account("quotes_api"), "https":self.get_next_proxy_for_account("quotes_api")} if use_proxy else None
+                quote_response = await asyncio.to_thread(requests.get, "https://quotes.tsunstudio.pw/api/quotes", proxies=proxies, impersonate="chrome110", verify=False)
+                quote_response.raise_for_status()
+                quote_data = quote_response.json()
+                
+                # Handle API response which might be a list
+                if isinstance(quote_data, list) and quote_data:
+                    first_quote = quote_data[0]
+                else:
+                    first_quote = quote_data
+
+                quote = first_quote.get("quote", "Quote not found.")
+                author = first_quote.get("author", "Unknown Author")
+                
+                # Prepare status message with markdown
+                status_message = (
+                    f"✨ *DePINed BOT Live Status* ✨\n\n"
+                    f"```Total Accounts: {len(self.access_tokens)}```\n\n"
+                    f"```Total Proxies: {len(self.proxies)}```\n\n"
+                    f"```Total Pings: {self.total_pings}```\n"
+                    f"```Total Points: {self.total_points:.2f}```\n\n"
+                    f"```"
+                    f"{quote}\n"
+                    f"~{author}"
+                    f"```"
+                )
+                
+                await self.send_telegram_status(status_message, use_proxy)
+            except Exception as e:
+                self.log(f"{Fore.RED}Failed to send status update to Telegram: {e}{Style.RESET_ALL}")
+
+    async def get_telegram_updates(self, use_proxy: bool, max_retries=5):
+        for retry in range(max_retries):
+            try:
+                proxies = {"http": self.get_next_proxy_for_account("telegram_updates"), "https": self.get_next_proxy_for_account("telegram_updates")} if use_proxy else None
+                url = f"https://api.telegram.org/bot{self.TELEGRAM_BOT_TOKEN}/getUpdates"
+                params = {'offset': self.last_update_id + 1, 'timeout': 30}
+                response = await asyncio.to_thread(requests.get, url, params=params, proxies=proxies, impersonate="chrome110", verify=False)
+                response.raise_for_status()
+                return response.json()
+            except requests.errors.RequestsError as e:
+                self.log(f"{Fore.YELLOW}Retry {retry + 1}/{max_retries}: Failed to get Telegram updates: {e}{Style.RESET_ALL}")
+                self.rotate_proxy_for_account("telegram_updates")
+                await asyncio.sleep(5)
+            except Exception as e:
+                self.log(f"{Fore.RED}Failed to get Telegram updates: {e}{Style.RESET_ALL}")
+                return None
+        return None
+
+    async def listen_telegram_commands(self, use_proxy: bool):
+        while True:
+            updates = await self.get_telegram_updates(use_proxy)
+            if updates and updates.get('ok') and updates.get('result'):
+                for update in updates.get('result'):
+                    self.last_update_id = update['update_id']
+                    message = update.get('message')
+                    if message and message.get('chat') and str(message['chat']['id']) == self.TELEGRAM_CHAT_ID:
+                        command = message.get('text', '').strip()
+                        if command == '/help':
+                            help_message = self.escape_markdown(
+                                f"👋 Welcome to DePINed BOT!\n\n"
+                                f"I am here to help you monitor your DePINed accounts.\n\n"
+                                f"Here are the available commands:\n"
+                                f"➡️ /help - Show this help message.\n"
+                                f"➡️ /status - Show the current earnings for all your accounts.\n"
+                                f"➡️ /summary - Show an overall summary of the bot's status.\n\n"
+                                f"If you have any questions, feel free to open an issue on the GitHub repository."
+                            )
+                            await self.send_telegram_status(help_message, use_proxy)
+                        elif command == '/status':
+                            status_message = "✨ Accounts Live Status ✨\n\n"
+                            
+                            for email, data in self.account_earnings.items():
+                                status_message += (
+                                    f"```[ Account: {data['name']} - Status: Epoch {data['epoch']} - Earning: {data['earnings']:.2f} PTS ]```\n"
+                                )
+                            
+                            await self.send_telegram_status(status_message, use_proxy)
+                        elif command == '/summary':
+                            quote = "کے لیے اتنا بھی مت گرو کہ وہ تمہیں گرا ہوا سمجھنے لگے۔"
+                            author = "نامعلوم"
+                            summary_message = (
+                                f"✨ *DePINed BOT Live Status* ✨\n\n"
+                                f"```Accounts: {len(self.access_tokens)}```\n\n"
+                                f"```Proxies: {len(self.proxies)}```\n\n"
+                                f"```Pings: {self.total_pings}```\n"
+                                f"```Points: {self.total_points:.2f}```\n\n"
+                                f"```"
+                                f"{quote}\n"
+                                f"~{author}"
+                                f"```"
+                            )
+                            await self.send_telegram_status(summary_message, use_proxy)
+
+            await asyncio.sleep(5)
+
 
     async def check_connection(self, email: str, proxy=None):
         url = "https://api.ipify.org?format=json"
@@ -194,6 +344,16 @@ class DePINed:
             if earning and earning.get("code") == 200:
                 epoch = earning.get("data", {}).get("epoch", "N/A")
                 balance = earning.get("data", {}).get("earnings", 0)
+                self.total_points += balance
+                
+                # Get short name for status
+                account_name = email.split('@')[0]
+                
+                self.account_earnings[email] = {
+                    "name": account_name,
+                    "epoch": epoch,
+                    "earnings": balance
+                }
 
                 self.print_message(email, proxy, Fore.WHITE, f"Epoch {epoch} "
                     f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
@@ -208,7 +368,7 @@ class DePINed:
             proxy = self.get_next_proxy_for_account(email) if use_proxy else None
 
             print(
-                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.pkt).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
                 f"{Fore.BLUE + Style.BRIGHT}Try to Sent Ping...{Style.RESET_ALL}",
                 end="\r",
@@ -218,9 +378,10 @@ class DePINed:
             ping = await self.user_send_ping(email, proxy)
             if ping and ping.get("message") == "Widget connection status updated":
                 self.print_message(email, proxy, Fore.GREEN, "PING Success")
+                self.total_pings += 1
 
             print(
-                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(self.pkt).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
                 f"{Fore.BLUE + Style.BRIGHT}Wait For 90 Seconds For Next Ping...{Style.RESET_ALL}",
                 end="\r"
@@ -262,11 +423,17 @@ class DePINed:
 
             self.log(f"{Fore.CYAN + Style.BRIGHT}={Style.RESET_ALL}"*75)
 
-            tasks = []
+            tasks = [
+                asyncio.create_task(self.telegram_status_task(use_proxy)),
+                asyncio.create_task(self.listen_telegram_commands(use_proxy))
+            ]
             for idx, account in enumerate(tokens, start=1):
                 if account:
                     email = account["Email"]
                     token = account["accessToken"]
+                    
+                    # Store a shortened name for the status command
+                    self.account_earnings[email] = {"name": email.split('@')[0], "epoch": "N/A", "earnings": 0}
 
                     if not "@" in email or not token:
                         self.log(
@@ -298,6 +465,8 @@ class DePINed:
 
         except Exception as e:
             self.log(f"{Fore.RED+Style.BRIGHT}Error: {e}{Style.RESET_ALL}")
+            if self.TELEGRAM_BOT_TOKEN and self.TELEGRAM_CHAT_ID:
+                await self.send_telegram_status(f"🚨 **(Emergency)**\n\nBOT has stopped due to an error: {e}", use_proxy)
             raise e
 
 if __name__ == "__main__":
@@ -306,7 +475,7 @@ if __name__ == "__main__":
         asyncio.run(bot.main())
     except KeyboardInterrupt:
         print(
-            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(bot.wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(bot.pkt).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
             f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
             f"{Fore.RED + Style.BRIGHT}[ EXIT ] DePINed - BOT{Style.RESET_ALL}                                       "                              
         )
