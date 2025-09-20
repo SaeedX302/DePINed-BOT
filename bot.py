@@ -173,7 +173,7 @@ class DePINed:
     
     async def telegram_status_task(self, use_proxy: bool):
         while True:
-            await asyncio.sleep(600)  # Wait for 10 minutes
+            await asyncio.sleep(600)  # Wait for 10 miutes
             try:
                 if use_proxy:
                     await self.refresh_proxies()
