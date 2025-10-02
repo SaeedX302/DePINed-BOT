@@ -69,11 +69,7 @@ class DePINed:
                 content = response.text
                 self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
             elif use_proxy_choice == 2:
-<<<<<<< HEAD
                 response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/0c9c9850220784f8aebce1fde5759cf8/raw/058d63f49d74ea250e574f3fe99e2fb1e1f2758c/old-saeed.txt")
-=======
-                response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/0c9c9850220784f8aebce1fde5759cf8/raw/942270ffbb9955064e59fa28adb2d43c7385f63f/saeed.txt")
->>>>>>> 848534fe5edf16ac18e54df49b2e558017cc7746
                 response.raise_for_status()
                 content = response.text
                 self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
@@ -94,11 +90,7 @@ class DePINed:
     async def refresh_proxies(self):
         try:
             self.log(f"{Fore.YELLOW}Refreshing private proxies...{Style.RESET_ALL}")
-<<<<<<< HEAD
             response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/0c9c9850220784f8aebce1fde5759cf8/raw/058d63f49d74ea250e574f3fe99e2fb1e1f2758c/old-saeed.txt")
-=======
-            response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/0c9c9850220784f8aebce1fde5759cf8/raw/942270ffbb9955064e59fa28adb2d43c7385f63f/saeed.txt")
->>>>>>> 848534fe5edf16ac18e54df49b2e558017cc7746
             response.raise_for_status()
             content = response.text
             self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
