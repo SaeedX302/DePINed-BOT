@@ -47,7 +47,7 @@ class DePINed:
         return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
     
     def load_accounts(self):
-        filename = "tokens.json"
+        filename = "newtokens.json"
         try:
             if not os.path.exists(filename):
                 self.log(f"{Fore.RED}File {filename} Not Found.{Style.RESET_ALL}")
@@ -69,7 +69,7 @@ class DePINed:
                 content = response.text
                 self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
             elif use_proxy_choice == 2:
-                response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/0c9c9850220784f8aebce1fde5759cf8/raw/efd8e2e7056080d334e2d422199f45d65d4da200/old-saeed.txt")
+                response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/3985c3bd76f4ba96ad729566a0ec04e4/raw/ccce8ebb19f5e6064eabea3cb79d32adbf143fa5/new-saeed.txt")
                 response.raise_for_status()
                 content = response.text
                 self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
@@ -90,7 +90,7 @@ class DePINed:
     async def refresh_proxies(self):
         try:
             self.log(f"{Fore.YELLOW}Refreshing private proxies...{Style.RESET_ALL}")
-            response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/0c9c9850220784f8aebce1fde5759cf8/raw/efd8e2e7056080d334e2d422199f45d65d4da200/old-saeed.txt")
+            response = await asyncio.to_thread(requests.get, "https://gist.githubusercontent.com/SaeedX302/3985c3bd76f4ba96ad729566a0ec04e4/raw/ccce8ebb19f5e6064eabea3cb79d32adbf143fa5/new-saeed.txt")
             response.raise_for_status()
             content = response.text
             self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
@@ -258,8 +258,8 @@ class DePINed:
                             
                             await self.send_telegram_status(status_message, use_proxy)
                         elif command == '/summary':
-                            quote = "کے لیے اتنا بھی مت گرو کہ وہ تمہیں گرا ہوا سمجھنے لگے۔"
-                            author = "نامعلوم"
+                            quote = "Enjoy Your Life۔"
+                            author = "BACHA"
                             summary_message = (
                                 f"✨ *DePINed BOT Live Status* ✨\n\n"
                                 f"```Accounts: {len(self.access_tokens)}```\n\n"
